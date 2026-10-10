@@ -1,0 +1,4 @@
+Mirror v96.11.2 vendored from GitHub tag v96.11.2
+Source: https://github.com/MirrorNetworking/Mirror
+No UPM package.json at Assets/Mirror (verified).
+Skipped: Tests, Examples, Hosting, Edgegap.

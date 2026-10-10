@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Памятка по пакетам</title>
+<link rel="stylesheet" href="style.css">
+<style>
+code, .path, a { word-break: normal; overflow-wrap: break-word; }
+p, ul, .note, table { page-break-inside: avoid; }
+.pkg { border: 1px solid #c5ced8; padding: 6px 8px; margin: 0 0 6px; page-break-inside: avoid; }
+.pkg p { margin: 0 0 2px; }
+.pkg .id { font-size: 10.5pt; }
+table.skip { table-layout: fixed; }
+table.skip th:nth-child(1), table.skip td:nth-child(1) { width: 36%; }
+</style>
+</head>
+<body>
+<p class="kicker">Заготовка смены · свой проект</p>
+<h1>Памятка по пакетам</h1>
+<p class="lead">Редактор <b>6000.6.3f1</b> (<code>45d8eee7de74</code>). Эту папку открывать как есть: Mirror и сцены уже внутри, пакеты из реестра Unity подтянет Package Manager. Ниже список, если проект пустой.</p>
+
+<h2>Редактор</h2>
+<p>Качать через <a href="https://unity.com/download">Unity Hub</a>. В списке редакторов нет этой сборки: Install Editor, затем Archive, версия <b>6000.6.3f1</b>.</p>
+<p>К редактору отметить модули Hub. Отдельными архивами с сайта Google их не брать:</p>
+<ul>
+<li>Android Build Support</li>
+<li>Android SDK &amp; NDK Tools</li>
+<li>OpenJDK</li>
+</ul>
+<p>Живая копия заготовки: <span class="path">D:\Work\TechnoMain\smena-starter</span>.</p>
+
+<h2>Пакеты реестра Unity</h2>
+<p>Window → Package Manager → Unity Registry. Версии из <span class="path">Packages/manifest.json</span> и <span class="path">Packages/packages-lock.json</span>. Адрес реестра: <span class="path">https://packages.unity.com</span>.</p>
+<div class="pkg"><p><b>Universal RP</b>, 17.6.0</p><p class="id"><code>com.unity.render-pipelines.universal</code></p><p>Пайплайн картинки. В Graphics назначен он, цветовое пространство Linear (<code>m_ActiveColorSpace: 1</code>).</p></div>
+<div class="pkg"><p><b>Input System</b>, 1.20.0</p><p class="id"><code>com.unity.inputsystem</code></p><p>Стики и кнопки. Active Input Handling = Input System Package (<code>activeInputHandler: 1</code>).</p></div>
+<div class="pkg"><p><b>uGUI</b>, 2.6.0</p><p class="id"><code>com.unity.ugui</code></p><p>Кнопки лобби и жёлтая клавиатура IP.</p></div>
+<div class="pkg"><p><b>XR Plugin Management</b>, 4.7.0</p><p class="id"><code>com.unity.xr.management</code></p><p>Выбор загрузчика XR по платформе.</p></div>
+<div class="pkg"><p><b>OpenXR Plugin</b>, 1.18.0</p><p class="id"><code>com.unity.xr.openxr</code></p><p>Единственный загрузчик Android. Внутри него включены Meta Quest Support и Meta Quest Touch Plus.</p></div>
+<div class="pkg"><p><b>XR Interaction Toolkit</b>, 3.6.0</p><p class="id"><code>com.unity.xr.interaction.toolkit</code></p><p>Захват куба, луч в кнопки, движение.</p></div>
+<div class="pkg"><p><b>Oculus XR Plugin</b>, 4.5.5</p><p class="id"><code>com.unity.xr.oculus</code></p><p>Пакет в проекте есть. В список загрузчиков Android он не входит: там только OpenXR (<span class="path">Assets/XR/XRGeneralSettingsPerBuildTarget.asset</span>, Android Providers).</p></div>
+<p>Вместе с ними Package Manager сам ставит зависимости: XR Core Utils 2.6.0, XR Legacy Input Helpers 3.0.1, Shader Graph 17.6.0. Отдельно их не искать.</p>
+<p>После XR Interaction Toolkit в карточке пакета импортировать sample <b>Starter Assets</b>. В APK папка <code>Samples~</code> не попадает. Рабочая копия экшенов уже лежит в <span class="path">Assets/SmenaStarter/Resources/<wbr>XRI Default Input Actions.inputactions</span>.</p>
+
+<h2>Mirror</h2>
+<p>Не пакет реестра. В проекте папка <span class="path">Assets/Mirror</span>, релиз <b>v96.11.2</b>. Источник: <a href="https://github.com/MirrorNetworking/Mirror/releases/tag/v96.11.2">github.com/MirrorNetworking/Mirror, тег v96.11.2</a>. Из архива копировать <span class="path">Assets/Mirror</span>. KCP приходит внутри, порт в заготовке 7777. Tests, Examples, Hosting, Edgegap не копировать (<span class="path">Assets/Mirror/SMENA_VENDOR.txt</span>).</p>
+<p>У этой папки нет <code>package.json</code>. Package Manager → Add package from git URL для неё не использовать: установка падает, тип <code>Mirror</code> в скриптах пропадает.</p>
+
+<h2>Сборки Android в этом проекте</h2>
+<p>Цифры из <span class="path">ProjectSettings/ProjectSettings.asset</span>:</p>
+<ul>
+<li>Minimum API Level 29 (<code>AndroidMinSdkVersion: 29</code>).</li>
+<li>Target Architectures: ARM64 (<code>AndroidTargetArchitectures: 2</code>).</li>
+<li>Application Entry: Game Activity (<code>androidApplicationEntry: 2</code>).</li>
+<li>Формат файла: APK.</li>
+<li>Идентификатор: <code>by.ndt.vidr.smena2026</code>.</li>
+</ul>
+<p>Поле <code>scriptingBackend</code> в файле пустое: отдельная галочка Mono или IL2CPP там не записана.</p>
+<p>На OpenXR Android включено: Meta Quest Support (<code>MetaQuestFeature Android</code>, Quest, Quest 2, Quest Pro, Quest 3, Quest 3S) и Meta Quest Touch Plus. Системная клавиатура Meta выключена (<code>enableSystemKeyboard: 0</code>). IP на шлеме набирают жёлтые кнопки сцены.</p>
+<p>Standalone (окно Windows) загрузчик XR не включает. Хост на ПК без шлема.</p>
+
+<h2>Что копировать из заготовки, кроме пакетов</h2>
+<p>Папка <span class="path">Assets/SmenaStarter</span>: скрипты, сцены <code>00_Lobby</code> и <code>01_Room</code>, префабы, копия input actions. Меню <b>Smena → Build Starter Scenes</b> эти сцены перезаписывает. Для уже собранной комнаты его не запускать.</p>
+
+<h2>В этот проект не ставить</h2>
+<table class="skip">
+<tr><th>Что</th><th>Почему</th></tr>
+<tr><td>Второй сетевой стек: Photon, Netcode for GameObjects, FishNet</td><td>В сцене один менеджер, <code>SmenaNetworkManager</code>. Второй стек даёт вторую сеть в том же процессе.</td></tr>
+<tr><td>Meta XR All-in-One SDK</td><td>В <span class="path">Packages/manifest.json</span> его нет. Шлем идёт через OpenXR.</td></tr>
+<tr><td>PICO SDK, SteamVR</td><td>Канон железа заготовки: Quest 2/3.</td></tr>
+<tr><td>DOTween</td><td>В <span class="path">Assets</span> его нет. Лобби без него работает.</td></tr>
+</table>
+<p class="note"><code>com.unity.multiplayer.center</code> 2.0.1 и <code>com.unity.nuget.newtonsoft-json</code> 3.2.2 стоят в manifest. Скрипты <span class="path">Assets/SmenaStarter</span> их не вызывают. Сеть проекта лежит в папке Mirror.</p>
+</body>
+</html>

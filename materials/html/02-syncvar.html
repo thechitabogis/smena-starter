@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>SyncVar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<p class="kicker">Тетрадь 2 · твой ПК</p>
+<h1>Состояние объекта. SyncVar</h1>
+<p class="lead">Число, имя, цвет и флаг «дверь открыта» должны совпасть у всех. Пишет их сервер. Картинку обновляет hook.</p>
+<p class="note">Ниже восемь вопросов. Под каждым сразу написан ответ.</p>
+
+<h2>Что это?</h2>
+<p class="ans">Ответ</p>
+<p><b>Состояние</b> — то, что обязано совпасть: жизни, имя, цвет, открыта дверь, список имён.</p>
+<p><b>SyncVar</b> — одно поле на скрипте <code>NetworkBehaviour</code>. Сервер меняет поле, Mirror шлёт новое значение клиентам.</p>
+<p><b>Hook</b> — метод <code>(старое, новое)</code>. В нём двигай слайдер, крась материал, включай свет. Сам hook число не хранит.</p>
+<p><b>SyncList, SyncDictionary, SyncSet</b> — список или словарь с той же идеей: на сервере добавил или удалил элемент, клиенты получили это изменение, а не весь мир заново.</p>
+<p>Позицию каждый кадр в SyncVar не клади. Для позы есть NetworkTransform. SyncVar на <code>Vector3</code> «чтобы было понятнее» забивает канал и опаздывает.</p>
+<figure>
+<img src="../figures/02-syncvar-hook.png" alt="Сервер пишет HP, hook рисует слайдер">
+<figcaption>100 и 70 — пример старого и нового значения. Поле помнит состояние. RPC только проигрывает событие.</figcaption>
+</figure>
+
+<h2>Как работает?</h2>
+<p class="ans">Ответ</p>
+<p>Общая тетрадь лежит на сервере. SyncVar — строка «жизни = 70». Hook — звонок: «строка изменилась, перерисуй слайдер». Ты на клиенте в тетрадь не пишешь. Можешь попросить Command-ом: «я попал, вычти 30». Сервер проверяет и сам меняет строку.</p>
+<p>RPC — фраза вслух: «дверь скрипнула». Кто зашёл позже, фразу не слышал. Строку «дверь открыта» он уже видит: при появлении объекта приезжают текущие SyncVar, ещё до <code>OnStartClient</code>. Поэтому дверь — поле, скрип — RPC.</p>
+<p>На хосте hook тоже вызывается. Сцена у сервера и у его локального клиента одна, отдельно сериализовать её «самому себе» не нужно. Звук в hook на хосте не пропадёт.</p>
+<p>На одном скрипте в этой версии Mirror два разных лимита: до 64 SyncVar и отдельно до 64 списков. 65-е поле или 65-й список — ошибка компиляции Weaver. Пять скриптов по десять полей — нормально.</p>
+<p>Правка числа мышкой в Inspector рассылку не запускает. Меняй поле кодом на сервере.</p>
+<p>В заготовке здоровья <code>TakeDamage</code>, <code>Die</code> и <code>Respawn</code> помечены <code>[Server]</code>. Hook <code>OnHealthChanged</code> только обновляет слайдер. Вспышка смерти — <code>ClientRpc</code>.</p>
+<p>Пример цвета в стартере — скрипт <code>ColorSyncExample</code> на табличке <code>IdeaPlaque</code>, не на жёлтом кубе. Цвет пишется только если <code>isServer</code>, hook красит <code>Renderer</code>.</p>
+<p>Куб в руке: при захвате <code>GrabNetworkAuthority</code> забирает authority. Когда отпускаешь, она не сбрасывается. Владелец — последний, кто схватил, пока куб не возьмёт другой.</p>
+
+<h2>Где взять?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li><code>[SyncVar]</code> уже в Mirror. Отдельный пакет не качай.</li>
+<li>Коллекции: <code>SyncList&lt;T&gt;</code>, <code>SyncDictionary</code>, <code>SyncHashSet</code> в <span class="path">Assets/Mirror/Core</span>.</li>
+<li>Поза: компоненты NetworkTransform Reliable, Unreliable или Hybrid.</li>
+<li>Анимация: <code>NetworkAnimator</code>.</li>
+<li>Готовый «инвентарь из магазина» не ставь, пока свой список из трёх строк не заработал.</li>
+</ul>
+
+<h2>Как настроить?</h2>
+<p class="ans">Ответ</p>
+<ol>
+<li>Скрипт наследует <code>NetworkBehaviour</code>. На объекте есть <code>NetworkIdentity</code>.</li>
+<li>Поле простого типа: число, bool, string, Vector3, Color или структура из таких полей. Не клади в SyncVar весь объект сцены.</li>
+<li>Hook: <code>hook = nameof(Имя)</code>, два аргумента того же типа, старое и новое.</li>
+<li>Пиши поле в методе <code>[Server]</code>, в <code>OnStartServer</code> или после <code>if (!isServer) return;</code>.</li>
+<li>Не больше 64 SyncVar и не больше 64 коллекций на одном скрипте. Больше полей — второй компонент.</li>
+<li>Список объявляй так: <code>readonly SyncList&lt;string&gt; names = new SyncList&lt;string&gt;();</code> Меняй его на сервере через <code>Add</code> и <code>Remove</code>, не подменяй весь список новым объектом.</li>
+</ol>
+
+<h2>Как правильно?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li>Поле помнит. RPC празднует.</li>
+<li>Сервер пишет. Hook рисует.</li>
+<li>Поза — NetworkTransform. Цвет, жизни, флаг — SyncVar.</li>
+<li>Правило проверяй рядом с записью: урон не ниже нуля, имя не длиннее лимита, мёртвый не стреляет.</li>
+</ul>
+
+<h2>Почему не работает?</h2>
+<p class="ans">Ответ</p>
+<table>
+<tr><th>Что происходит</th><th>Где искать</th></tr>
+<tr><td>Поменял в инспекторе, у друга по-старому</td><td>писать надо кодом на сервере</td></tr>
+<tr><td>Hook молчит</td><td>значение не изменилось, другая сигнатура, объект ещё не в сети</td></tr>
+<tr><td>Слайдер есть только у стрелявшего</td><td>UI обновляют локально, а не в hook</td></tr>
+<tr><td>Новый игрок не видит открытую дверь</td><td>дверь сделали RPC. Нужен SyncVar</td></tr>
+<tr><td>Звук попадания есть, жизни разъехались</td><td>RPC ушёл, SyncVar на сервере не записали</td></tr>
+<tr><td>Список у клиента пустой</td><td>заполнили до Spawn или на клиенте</td></tr>
+<tr><td>Ошибка Weaver</td><td>статик, свойство вместо поля, чужой тип, или 65-е поле / 65-й список</td></tr>
+</table>
+
+<h2>Что ещё можно?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li>Имя над головой: SyncVar на префабе игрока, текст в world-space Canvas внутри hook.</li>
+<li>Дверь, рычаг, лампа: один bool или enum.</li>
+<li>Очки матча: одно число на объекте матча, не копия у каждого клиента.</li>
+<li>Инвентарь, который растёт: SyncList, не десять полей slot0…slot9.</li>
+<li>Свой прицел в сеть не клади. Его видишь только ты.</li>
+</ul>
+
+<h2>Как улучшить?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li>Шли факт, не поток. Жизни — в момент попадания, не 90 раз в секунду.</li>
+<li>Цвет бери из палитры, не гони плавный Color каждый кадр.</li>
+<li><code>SyncMode.Owner</code> — если соседу это поле рисовать не нужно.</li>
+<li>Опоздавшему хватает текущего состояния. Не проси его заново проиграть все старые RPC.</li>
+</ul>
+
+<h2>Куда открыть</h2>
+<ul>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/guides/synchronization/syncvars">SyncVar</a></li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/guides/synchronization/syncvar-hooks">Hook</a></li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/guides/synchronization">Как собирается пакет состояния</a></li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/guides/communications/remote-actions">Command и RPC</a></li>
+<li>Пример цвета: <span class="path">Assets/SmenaStarter/Scripts/ColorSyncExample.cs</span></li>
+<li>Здоровье, которое дописываешь сам: <span class="path">docs/quest-mirror-skeletons/M4-sync/PlayerHealth.cs</span></li>
+</ul>
+</body>
+</html>

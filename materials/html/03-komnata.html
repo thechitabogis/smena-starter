@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Комната ожидания</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<p class="kicker">Тетрадь 3 · твой ПК</p>
+<h1>Комната ожидания</h1>
+<p class="lead">Лобби — это коридор. Вы уже в одной сети, матч ещё не начался. В уровень всех выпускает сервер, одной сменой сцены.</p>
+<p class="note">Ниже восемь вопросов. Под каждым сразу написан ответ.</p>
+
+<h2>Что это?</h2>
+<p class="ans">Ответ</p>
+<p>Задачи лобби: увидеть, кто здесь; не начинать матч в одиночку; дать момент старта.</p>
+<p>Это не калибровка и не меню до кнопки Host. Пока соединения нет, общей комнаты нет. Есть только твой локальный экран.</p>
+<p>Два рабочих варианта:</p>
+<ul>
+<li><b>Свой</b>, как в стартере. <code>LobbyRoster</code> считает людей через SyncVar. Кнопка «В комнату» есть только у хоста. <code>ServerChangeScene</code> грузит <code>01_Room</code> всем.</li>
+<li><b>Штатный Mirror.</b> <code>NetworkRoomManager</code> и префаб с <code>NetworkRoomPlayer</code>. Слоты, минимум игроков, флаг «готов», сцена комнаты и сцена игры. В наследнике методы называй <code>OnRoom...</code>, не подменяй обычные <code>OnServer...</code> менеджера: так затирается логика комнаты.</li>
+</ul>
+<p>Стартер штатную комнату не использует. Если хватает счётчика и кнопки хоста — делай как стартер. Если нужно «все нажали Готов» — бери <code>NetworkRoomManager</code>, не прикручивай галочки к чужому экрану.</p>
+<figure>
+<img src="../figures/03-lobby-room.png" alt="Лобби и переход в комнату">
+<figcaption>Кнопка старта только у хоста. Клиент сам LoadScene не вызывает.</figcaption>
+</figure>
+
+<h2>Как работает?</h2>
+<p class="ans">Ответ</p>
+<p><code>ServerChangeScene</code> переключает тех, кто уже подключён, и запоминает имя сцены. Опоздавший загрузит комнату, а не пустое лобби.</p>
+<p><code>SceneManager.LoadScene</code> на шлеме этого не делает. Шлем уходит в свою копию комнаты, хост остаётся в лобби. Это уже два разных мира.</p>
+<p>В штатной комнате человека два префаба. В коридоре — лёгкий слот: имя и ready. В уровне — тело с руками. Создание тела: <code>OnRoomServerCreateGamePlayer(conn, roomPlayer)</code>. Старые примеры без <code>roomPlayer</code> устарели.</p>
+<p>В стартере и в лобби, и в комнате игрока создаёт <code>OnServerAddPlayer</code>. Для первой своей игры так проще.</p>
+<p>Кнопка в стартере видна, только пока <code>NetworkServer.active</code>. На чистом клиенте сервера нет, кнопки нет. Счётчик — одно поле <code>playerCount</code>, не текст, который каждый пишет у себя.</p>
+<p>Ready имеет смысл, когда старт не единоличный. Сервер проверяет: все готовы и людей не меньше минимума, потом меняет сцену. Галочка только на клиенте — картинка.</p>
+
+<h2>Где взять?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li>Первая комната: <code>LobbyHud</code>, <code>LobbyRoster</code>, <code>SmenaNetworkManager</code>.</li>
+<li>Слоты и Ready: компоненты Network Room Manager и Network Room Player. Файлы уже в <span class="path">Assets/Mirror/Components</span>.</li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/components/network-room-manager">Страница комнаты Mirror</a></li>
+</ul>
+
+<h2>Как настроить?</h2>
+<p class="ans">Ответ</p>
+<p>Своя комната:</p>
+<ol>
+<li>Две сцены в Build Settings: ожидание и игра. Обе знает менеджер.</li>
+<li>На экране: поле IP, Host, Connect, счётчик, кнопка старта только на сервере.</li>
+<li>Старт через <code>ServerChangeScene</code>, не через <code>LoadScene</code>.</li>
+<li>В лобби тело игрока можно не рисовать. Хватает числа и имени.</li>
+</ol>
+<p>Штатная комната:</p>
+<ol>
+<li>Один менеджер — наследник <code>NetworkRoomManager</code>. Второй менеджер рядом не вешай.</li>
+<li>Заполни <code>RoomScene</code>, <code>GameplayScene</code>, <code>roomPlayerPrefab</code>, <code>playerPrefab</code>, <code>minPlayers</code>.</li>
+<li>На префабе слота — <code>NetworkIdentity</code> и <code>NetworkRoomPlayer</code>.</li>
+<li>Ready идёт через метод комнаты, не через свой bool на клиенте.</li>
+<li>Свою логику пиши в <code>OnRoomServerSceneChanged</code> и соседних <code>OnRoom*</code>.</li>
+</ol>
+
+<h2>Как правильно?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li>Либо старт жмёт хост, либо сервер ждёт, пока все ready. Не держи оба правила сразу, если не можешь сказать, кто главный.</li>
+<li>В лобби нет стрельбы и захвата. Иначе это вторая игра.</li>
+<li>Имя и ready — SyncVar. Надпись «матч начался» — следствие смены сцены.</li>
+<li>После перехода выключи UI лобби. Иначе кнопка Host останется поверх комнаты.</li>
+</ul>
+
+<h2>Почему не работает?</h2>
+<p class="ans">Ответ</p>
+<table>
+<tr><th>Что происходит</th><th>Где искать</th></tr>
+<tr><td>У хоста комната, у шлема лобби</td><td>клиент загрузил сцену сам</td></tr>
+<tr><td>Кнопка старта на шлеме ломает всем сцену</td><td>нет проверки NetworkServer.active</td></tr>
+<tr><td>Счётчик врёт</td><td>текст локальный, мимо SyncVar</td></tr>
+<tr><td>Ready нажат, игра не началась</td><td>мало людей, не все ready, или ждут и кнопку, и ready без одного правила</td></tr>
+<tr><td>В лобби дёргается камера</td><td>в комнату спавнится полный XR-риг. Нужен лёгкий слот или выключенный чужой риг</td></tr>
+<tr><td>После старта нет тела</td><td>пустой playerPrefab или нет точки спавна</td></tr>
+<tr><td>Два менеджера</td><td>оставили NetworkManager и добавили NetworkRoomManager</td></tr>
+</table>
+
+<h2>Что ещё можно?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li>Цвет команды на слоте через SyncVar, в игре тот же цвет на аватаре.</li>
+<li>Лимит мест: сервер не пускает сверх N. Кнопка «выгнать» только на клиенте ничего не делает.</li>
+<li>Зритель без рук — отдельный префаб, после того как обычный игрок уже стабилен.</li>
+<li>Пароль комнаты в классе обычно лишний: комната и так отделена IP.</li>
+</ul>
+
+<h2>Как улучшить?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li>Прячь IP за Discovery, когда ручной адрес уже не путаешь.</li>
+<li>Не тащи в лобби толпу моделей и захват. На Quest лобби должно открываться быстро.</li>
+<li>Если Connect завис, верни экран адреса, не оставляй вечную загрузку.</li>
+<li>Одно правило старта на всю игру. Менять его посреди проекта путает сильнее, чем бедное лобби.</li>
+</ul>
+
+<h2>Куда открыть</h2>
+<ul>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/components/network-room-manager">Network Room Manager</a></li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/components/network-manager">Как сервер меняет сцену</a></li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/general/deprecations">Старые сигнатуры, которые уже не копируют</a></li>
+<li>Код стартера: <span class="path">LobbyHud.cs</span>, <span class="path">LobbyRoster.cs</span>, <span class="path">SmenaNetworkManager.HostGoToRoom</span></li>
+</ul>
+</body>
+</html>

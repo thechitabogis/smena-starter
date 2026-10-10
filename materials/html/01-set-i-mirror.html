@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Сеть и Mirror</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<p class="kicker">Тетрадь 1 · твой ПК</p>
+<h1>Сеть и Mirror</h1>
+<p class="lead">Хост на Windows варит один мир. Шлем Quest заходит в него по IP. Mirror — это код сети в Unity, не зеркало шлема и не трансляция картинки.</p>
+<p class="note">Ниже восемь вопросов. Под каждым сразу написан ответ.</p>
+
+<h2>Что это?</h2>
+<p class="ans">Ответ</p>
+<p><b>Локальная игра</b> — один Play. Окно на ПК видит только этот ПК. Шлем со своим билдом видит только себя, пока нет подключения.</p>
+<p><b>Сетевая игра</b> — несколько программ договорились об одном мире. Картинка у каждого своя. Правда одна.</p>
+<p><b>Сервер</b> решает: кто зашёл, какой объект родился, какое число настоящее.<br>
+<b>Клиент</b> рисует и просит.<br>
+<b>Хост</b> — сервер и клиент в одном процессе. В классе хост — ПК. Шлем — клиент.<br>
+Отдельный сервер без окна и без игрока в классе не нужен: некому нажать Host.</p>
+<p><b>Mirror</b> (в стартере v96.11.2) несёт байты, спавнит объекты и рассылает поля. <b>Транспорт</b> — способ нести байты. У нас <b>KCP</b>, порт <b>7777</b>. Рядом в той же папке лежат Telepathy (TCP, удобнее ловить ошибку, хуже для частых поз) и SimpleWeb (браузер). На Quest их не включай.</p>
+<figure>
+<img src="../figures/01-host-client.png" alt="Хост на ПК и клиент в Quest">
+<figcaption>Стрелка — пакеты состояния, не видео со шлема.</figcaption>
+</figure>
+
+<h2>Как работает?</h2>
+<p class="ans">Ответ</p>
+<p>Два Play без Host — две отдельные игры, даже если проект один. Один нажал Host, второй вписал IP и Connect — сетевой куб один на двоих. Рисуется он всё равно дважды. Если связь плохая, куб у гостя догоняет рывками, а у хоста окно плавное: хосту пакет «до себя» почти не нужен.</p>
+<p><code>127.0.0.1</code> — это «я сам». Шлем так до ПК не дойдёт. Нужен IPv4 хоста в той же сети. Его пишет жёлтая строка лобби.</p>
+<p>Если у тебя день, а у друга ночь, это не «графика сети». Небо каждый клиент рисует из своей сцены. Сцены разъехались.</p>
+<ol>
+<li>На <code>NetworkManager</code> висят транспорт и префаб игрока.</li>
+<li>Хост вызывает <code>StartHost()</code>. Клиент пишет адрес в <code>networkAddress</code> и вызывает <code>StartClient()</code>.</li>
+<li>Сервер в <code>OnServerAddPlayer</code> создаёт игрока и сажает его на соединение. Объект виден всем, только если на префабе есть <code>NetworkIdentity</code> и префаб лежит в Registered Spawnable Prefabs.</li>
+<li>Объект, который стоит в сцене с самого старта и должен быть общим, тоже с <code>NetworkIdentity</code>. Его не спавнят вручную.</li>
+<li>Дальше три вида сообщений: <b>SyncVar / SyncList</b> — состояние с сервера; <b>Command</b> — просьба клиента серверу; <b>ClientRpc</b> — сервер говорит всем, <b>TargetRpc</b> — одному.</li>
+</ol>
+<p><code>isServer</code> — этот процесс сервер. <code>isClient</code> — клиент. На хосте оба true. <code>isLocalPlayer</code> — это твой игрок. <code>isOwned</code> — у тебя authority на объект (свой аватар или схваченный куб).</p>
+<p>Чужой transform ты не двигаешь «по-настоящему». Либо объект твой, либо ты шлёшь Command.</p>
+
+<h2>Где взять?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li>В стартере Mirror уже лежит: <span class="path">Assets/Mirror</span>. Не ставь его через Package Manager git-URL: у этой папки нет <code>package.json</code>, установка падает.</li>
+<li>В свой проект копируй ту же папку, чтобы у всего класса была одна версия. Не ставь рядом Photon, Netcode for GameObjects или FishNet. Два сетевых стека в одной сцене не живут.</li>
+<li>Менеджер на сцене один. В стартере это <code>SmenaNetworkManager</code>. Второй менеджер — вторая игра в том же процессе.</li>
+</ul>
+
+<h2>Как настроить?</h2>
+<p class="ans">Ответ</p>
+<ol>
+<li>Объект менеджера, <code>KcpTransport</code>, один порт на всех (7777).</li>
+<li>Player Prefab с <code>NetworkIdentity</code>. Пустая ссылка даёт в консоли «playerPrefab не назначен».</li>
+<li>Don't Destroy On Load, чтобы менеджер пережил смену сцены. В сцене он один.</li>
+<li>Пуля, куб, табличка — в список спавна и с <code>NetworkIdentity</code>.</li>
+<li>Поза: <code>NetworkTransformUnreliable</code> для рук и куба в руке (часто и с низким лагом, пакет может потеряться). <code>NetworkTransformReliable</code> для двери, которая должна доехать точно. <code>NetworkTransformHybrid</code> есть в этой версии Mirror, но пока хватает одного из первых двух — бери его. На учебном кубе стартера стоит Unreliable. Send Rate 10 на менеджере — это интервал 0,1 с. Буфер = интервал × множитель. В документации советуют около 3, в коде этого релиза по умолчанию 2. Выше множитель — плавнее и с большей задержкой.</li>
+<li>Чужой аниматор — <code>NetworkAnimator</code>, не SyncVar на каждый кадр.</li>
+<li>Адрес — IPv4 хоста, не localhost.</li>
+</ol>
+<p><code>NetworkManagerHUD</code> — готовые кнопки Host / Client из Mirror. В стартере вместо них свой экран лобби. В своей игре можно начать с HUD, потом заменить кнопки на VR.</p>
+
+<h2>Как правильно?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li>Правда на сервере. Клиент показывает.</li>
+<li>Один Host на ПК, остальные — Client на шлеме.</li>
+<li>Один порт, одна сеть, Wi-Fi без изоляции клиентов.</li>
+<li>Объект, который видят другие, рождается на сервере.</li>
+<li>Правило «поднял монету»: Command на сервер, сервер меняет число, SyncVar развозит его всем.</li>
+</ul>
+
+<h2>Почему не работает?</h2>
+<p class="ans">Ответ</p>
+<table>
+<tr><th>Что происходит</th><th>Где искать</th></tr>
+<tr><td>Connect крутится, статуса нет</td><td>IP не хоста, другой порт, разный Wi-Fi, изоляция точки, файрвол на 7777</td></tr>
+<tr><td>Хост есть, игрок не появляется</td><td>пустой Player Prefab, нет NetworkIdentity, префаб не в списке спавна</td></tr>
+<tr><td>Объект есть только у того, кто нажал</td><td>Instantiate на клиенте без серверного Spawn</td></tr>
+<tr><td>У друга куб стоит, у тебя едет</td><td>нет NetworkTransform или authority не у того, кто держит</td></tr>
+<tr><td>Вы в разных мирах</td><td>оба нажали Host. Нужен один Host</td></tr>
+<tr><td>После смены сцены игрок пропал</td><td>менеджер не DontDestroyOnLoad, или сцена загружена через SceneManager мимо сервера</td></tr>
+<tr><td>В консоли нет типа Mirror</td><td>папку Assets/Mirror не скопировали или она не докомпилировалась</td></tr>
+</table>
+
+<h2>Что ещё можно?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li><b>NetworkDiscovery</b> — шлем сам находит хост, без ввода IP. Сначала всё равно пойми, что такое адрес.</li>
+<li><b>Interest management</b> — сервер не шлёт далёкие объекты. Имеет смысл, когда объектов десятки. На пятерых в одной комнате рано.</li>
+<li><b>SyncMode</b>: Observers (всем) или Owner (только владельцу). Владельцу — то, что другим рисовать не нужно.</li>
+<li>Свой транспорт не пиши. Latency Simulation — только чтобы на ПК увидеть лаг, не для билда на Quest.</li>
+</ul>
+
+<h2>Как улучшить?</h2>
+<p class="ans">Ответ</p>
+<ul>
+<li>Реже шли позу лежащего предмета. Руку в захвате — чаще.</li>
+<li>Не синхронизируй то, что считается на месте: таймер UI, пыль, свой луч.</li>
+<li>Урон, очки и «я выиграл» считает сервер. Красивый луч можно показать всем через RPC.</li>
+<li>Один билд — одна версия Mirror. Смешал v96 с другой — подключение может молча не сойтись.</li>
+</ul>
+
+<h2>Куда открыть</h2>
+<ul>
+<li><a href="https://mirror-networking.gitbook.io/docs">Документация Mirror</a></li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/components/network-manager">NetworkManager, Host, Client, смена сцены</a></li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/guides/communications/networkmanager-callbacks">Порядок колбэков</a></li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/guides/communications/remote-actions">Command и ClientRpc</a></li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/components/networkbehaviour">NetworkBehaviour</a></li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/components/network-transform">Поза и буфер</a></li>
+<li><a href="https://github.com/MirrorNetworking/Mirror/releases/tag/v96.11.2">Релиз v96.11.2</a></li>
+<li><a href="https://mirror-networking.gitbook.io/docs/manual/general/deprecations">Что убрали в новых версиях</a></li>
+</ul>
+</body>
+</html>
