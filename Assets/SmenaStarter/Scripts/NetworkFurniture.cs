@@ -79,16 +79,18 @@ namespace SmenaStarter
         public static GameObject CreateNetworkObject()
         {
             var root = new GameObject("NetworkFurniture");
-            root.AddComponent<NetworkIdentity>();
+            // NetworkIdentity caches NetworkBehaviours immediately in Awake,
+            // so add it only after all the network behaviours are on the object.
             var body = root.AddComponent<Rigidbody>();
             body.mass = 20f;
             body.interpolation = RigidbodyInterpolation.Interpolate;
             root.AddComponent<BoxCollider>();
-            var networkTransform = root.AddComponent<NetworkTransformUnreliable>();
-            networkTransform.syncDirection = SyncDirection.ClientToServer;
             root.AddComponent<XRGrabInteractable>();
             root.AddComponent<GrabNetworkAuthority>();
+            var networkTransform = root.AddComponent<NetworkTransformUnreliable>();
+            networkTransform.syncDirection = SyncDirection.ClientToServer;
             root.AddComponent<NetworkFurniture>();
+            root.AddComponent<NetworkIdentity>();
             return root;
         }
     }
