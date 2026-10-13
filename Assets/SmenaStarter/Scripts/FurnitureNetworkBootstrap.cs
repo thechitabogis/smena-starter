@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace SmenaStarter
 {
-    /// <summary>Registers the shared furniture wrapper before Mirror starts the client.</summary>
+    /// <summary>Registers the ready Chair01 prefab before Mirror starts the client.</summary>
     public static class FurnitureNetworkBootstrap
     {
         // Stable custom spawn ID. The same handler runs on each connected build.
@@ -17,8 +17,16 @@ namespace SmenaStarter
 
         static GameObject Spawn(Vector3 position, uint _)
         {
-            var item = NetworkFurniture.CreateNetworkObject();
-            item.transform.position = position;
+            var catalog = Resources.Load<FurnitureCatalog>("FurnitureCatalog");
+            if (catalog == null || catalog.items == null || catalog.items.Count == 0 ||
+                catalog.items[0] == null || catalog.items[0].prefab == null)
+            {
+                Debug.LogError("Smena: сетевой префаб Chair01 отсутствует в каталоге.");
+                return null;
+            }
+
+            var item = Object.Instantiate(catalog.items[0].prefab, position, Quaternion.identity);
+            item.name = "Chair01";
             return item;
         }
 
