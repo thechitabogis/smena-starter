@@ -25,6 +25,12 @@ namespace SmenaStarter
                 kcp.Port = (ushort)LocalIpUtil.Port;
         }
 
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+            FurnitureNetworkBootstrap.RegisterSpawnHandler();
+        }
+
         public override void OnServerAddPlayer(NetworkConnectionToClient conn)
         {
             var isListenHost = conn.connectionId == 0 && NetworkServer.localConnection == conn;

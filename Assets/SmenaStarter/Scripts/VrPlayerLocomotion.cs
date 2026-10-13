@@ -18,14 +18,15 @@ namespace SmenaStarter
         XROrigin origin;
         Transform leftController;
         Transform rightController;
+        static int furnitureSpawnCount;
 
         public override void OnStartLocalPlayer()
         {
+            if (GetComponent<FurnitureMenu>() == null)
+                gameObject.AddComponent<FurnitureMenu>();
+
             if (Application.platform != RuntimePlatform.Android)
-            {
-                enabled = false;
                 return;
-            }
 
             var visual = GetComponent<VrPlayerVisual>();
             foreach (var renderer in GetComponentsInChildren<Renderer>(true))
@@ -124,6 +125,39 @@ namespace SmenaStarter
         {
             if (connectionToClient != null)
                 RoomCalibration.MarkReady(connectionToClient.connectionId, measuredMeters);
+        }
+
+        [Command]
+        public void CmdSpawnFurniture(int index)
+        {
+            if (!NetworkServer.active || SceneManager.GetActiveScene().name != SmenaNetworkManager.RoomScene)
+                return;
+
+            var catalog = Resources.Load<FurnitureCatalog>("FurnitureCatalog");
+            if (catalog == null || catalog.items == null || index < 0 || index >= catalog.items.Count)
+                return;
+
+            var entry = catalog.items[index];
+            if (entry == null || entry.prefab == null)
+                return;
+
+            var forward = transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.001f)
+                forward = Vector3.forward;
+            forward.Normalize();
+            var right = Vector3.Cross(Vector3.up, forward).normalized;
+            var column = furnitureSpawnCount % 3;
+            var row = furnitureSpawnCount / 3;
+            var position = transform.position + forward * (1.5f + row * 0.8f)
+                + right * ((column - 1) * 0.8f);
+            position.y = 0.05f;
+
+            var item = NetworkFurniture.CreateNetworkObject();
+            item.transform.SetPositionAndRotation(position, Quaternion.LookRotation(forward));
+            item.GetComponent<NetworkFurniture>().SetModelIndex(index);
+            NetworkServer.Spawn(item, FurnitureNetworkBootstrap.AssetId);
+            furnitureSpawnCount++;
         }
 
     }
