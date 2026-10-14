@@ -11,8 +11,17 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 static class FurnitureCatalogBuilder
 {
     const string CatalogPath = "Assets/SmenaStarter/Resources/FurnitureCatalog.asset";
-    const string SourcePrefabPath = "Assets/Furniture Mega Pack/Prefabs/Chairs/Chair01.prefab";
-    const string NetworkPrefabPath = "Assets/SmenaStarter/Prefabs/NetworkChair01.prefab";
+    static readonly (string displayName, string sourcePath)[] Furniture =
+    {
+        ("Chair01", "Assets/Furniture Mega Pack/Prefabs/Chairs/Chair01.prefab"),
+        ("Toilet01", "Assets/Furniture Mega Pack/Prefabs/Bathroom/Toilet01.prefab"),
+        ("Bed01", "Assets/Furniture Mega Pack/Prefabs/Beds/Bed01.prefab"),
+        ("Closet01", "Assets/Furniture Mega Pack/Prefabs/Closets/Closet01.prefab"),
+        ("Cushion01", "Assets/Furniture Mega Pack/Prefabs/Cushioins/Cushion01.prefab"),
+        ("Drawer01", "Assets/Furniture Mega Pack/Prefabs/Drawers/Drawer01.prefab"),
+        ("Sofa01", "Assets/Furniture Mega Pack/Prefabs/Sofas/Sofa01.prefab"),
+        ("Table01", "Assets/Furniture Mega Pack/Prefabs/Tables/Table01.prefab")
+    };
 
     static FurnitureCatalogBuilder()
     {
@@ -36,39 +45,66 @@ static class FurnitureCatalogBuilder
             AssetDatabase.CreateAsset(catalog, CatalogPath);
         }
 
-        var source = AssetDatabase.LoadAssetAtPath<GameObject>(SourcePrefabPath);
-        if (source == null)
+        var entries = new List<FurnitureCatalog.Entry>(Furniture.Length);
+        foreach (var item in Furniture)
         {
-            Debug.LogError("Smena: не найден " + SourcePrefabPath);
-            return;
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>(item.sourcePath);
+            if (source == null)
+            {
+                Debug.LogError("Smena: не найден " + item.sourcePath);
+                continue;
+            }
+
+            GameObject prefab;
+            if (item.displayName == "Chair01")
+            {
+                const string networkChairPath = "Assets/SmenaStarter/Prefabs/NetworkChair01.prefab";
+                prefab = AssetDatabase.LoadAssetAtPath<GameObject>(networkChairPath);
+                if (prefab == null)
+                    prefab = BuildNetworkPrefab(item.sourcePath, networkChairPath, item.displayName);
+            }
+            else
+            {
+                // These seven source prefabs already have physics, XR grab and Mirror components.
+                prefab = source;
+                if (!IsNetworkReady(prefab))
+                {
+                    Debug.LogError("Smena: в префабе " + item.displayName + " не хватает сетевых компонентов.");
+                    continue;
+                }
+            }
+
+            if (prefab == null)
+                continue;
+
+            entries.Add(new FurnitureCatalog.Entry { displayName = item.displayName, prefab = prefab });
         }
-
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(NetworkPrefabPath);
-        if (prefab == null)
-            prefab = BuildNetworkPrefab();
-        if (prefab == null)
-            return;
-
-        var entries = new List<FurnitureCatalog.Entry>
-        {
-            new FurnitureCatalog.Entry { displayName = "Chair01", prefab = prefab }
-        };
 
         catalog.items = entries;
         EditorUtility.SetDirty(catalog);
         AssetDatabase.SaveAssets();
-        Debug.Log("Smena: каталог мебели содержит только готовый сетевой Chair01.");
+        Debug.Log("Smena: каталог мебели содержит " + entries.Count + " сетевых предметов.");
     }
 
-    static GameObject BuildNetworkPrefab()
+    static bool IsNetworkReady(GameObject prefab)
     {
-        var contents = PrefabUtility.LoadPrefabContents(SourcePrefabPath);
+        return prefab.GetComponent<NetworkIdentity>() != null
+            && prefab.GetComponent<NetworkTransformUnreliable>() != null
+            && prefab.GetComponent<GrabNetworkAuthority>() != null
+            && prefab.GetComponent<XRGrabInteractable>() != null
+            && prefab.GetComponent<Rigidbody>() != null
+            && prefab.GetComponent<Collider>() != null;
+    }
+
+    static GameObject BuildNetworkPrefab(string sourcePath, string networkPrefabPath, string displayName)
+    {
+        var contents = PrefabUtility.LoadPrefabContents(sourcePath);
         try
         {
             var renderers = contents.GetComponentsInChildren<Renderer>(true);
             if (renderers.Length == 0)
             {
-                Debug.LogError("Smena: в Chair01 нет Renderer.");
+                Debug.LogError("Smena: в " + displayName + " нет Renderer.");
                 return null;
             }
 
@@ -78,17 +114,21 @@ static class FurnitureCatalogBuilder
 
             var body = contents.GetComponent<Rigidbody>();
             if (body == null)
+            {
                 body = contents.AddComponent<Rigidbody>();
-            body.mass = 8f;
-            body.interpolation = RigidbodyInterpolation.Interpolate;
+                body.mass = 8f;
+                body.interpolation = RigidbodyInterpolation.Interpolate;
+            }
 
-            var collider = contents.GetComponent<BoxCollider>();
+            var collider = contents.GetComponent<Collider>();
             if (collider == null)
-                collider = contents.AddComponent<BoxCollider>();
-            collider.center = contents.transform.InverseTransformPoint(bounds.center);
-            var size = contents.transform.InverseTransformVector(bounds.size);
-            collider.size = new Vector3(Mathf.Max(0.08f, Mathf.Abs(size.x)),
-                Mathf.Max(0.08f, Mathf.Abs(size.y)), Mathf.Max(0.08f, Mathf.Abs(size.z)));
+            {
+                var boxCollider = contents.AddComponent<BoxCollider>();
+                boxCollider.center = contents.transform.InverseTransformPoint(bounds.center);
+                var size = contents.transform.InverseTransformVector(bounds.size);
+                boxCollider.size = new Vector3(Mathf.Max(0.08f, Mathf.Abs(size.x)),
+                    Mathf.Max(0.08f, Mathf.Abs(size.y)), Mathf.Max(0.08f, Mathf.Abs(size.z)));
+            }
 
             if (contents.GetComponent<XRGrabInteractable>() == null)
                 contents.AddComponent<XRGrabInteractable>();
@@ -101,8 +141,8 @@ static class FurnitureCatalogBuilder
             if (contents.GetComponent<NetworkIdentity>() == null)
                 contents.AddComponent<NetworkIdentity>();
 
-            var result = PrefabUtility.SaveAsPrefabAsset(contents, NetworkPrefabPath);
-            Debug.Log("Smena: создан сетевой префаб " + NetworkPrefabPath);
+            var result = PrefabUtility.SaveAsPrefabAsset(contents, networkPrefabPath);
+            Debug.Log("Smena: создан сетевой префаб " + networkPrefabPath);
             return result;
         }
         finally

@@ -3,30 +3,48 @@ using UnityEngine;
 
 namespace SmenaStarter
 {
-    /// <summary>Registers the ready Chair01 prefab before Mirror starts the client.</summary>
+    /// <summary>Registers one custom network spawn handler for every furniture prefab.</summary>
     public static class FurnitureNetworkBootstrap
     {
-        // Stable custom spawn ID. The same handler runs on each connected build.
-        public const uint AssetId = 0x534D4601;
+        // Chair01 keeps its existing ID; each additional catalog entry gets its own ID.
+        const uint FirstAssetId = 0x534D4601;
+
+        public static uint GetAssetId(int catalogIndex)
+        {
+            return FirstAssetId + (uint)catalogIndex;
+        }
 
         public static void RegisterSpawnHandler()
         {
             // Mirror clears custom handlers on disconnect, so register at each client start.
-            NetworkClient.RegisterSpawnHandler(AssetId, Spawn, Unspawn);
+            var catalog = Resources.Load<FurnitureCatalog>("FurnitureCatalog");
+            if (catalog == null || catalog.items == null)
+            {
+                Debug.LogError("Smena: не найден Resources/FurnitureCatalog.asset.");
+                return;
+            }
+
+            for (var i = 0; i < catalog.items.Count; i++)
+            {
+                var index = i;
+                NetworkClient.RegisterSpawnHandler(GetAssetId(index),
+                    (position, _) => Spawn(index, position), Unspawn);
+            }
         }
 
-        static GameObject Spawn(Vector3 position, uint _)
+        static GameObject Spawn(int index, Vector3 position)
         {
             var catalog = Resources.Load<FurnitureCatalog>("FurnitureCatalog");
-            if (catalog == null || catalog.items == null || catalog.items.Count == 0 ||
-                catalog.items[0] == null || catalog.items[0].prefab == null)
+            if (catalog == null || catalog.items == null || index < 0 || index >= catalog.items.Count ||
+                catalog.items[index] == null || catalog.items[index].prefab == null)
             {
-                Debug.LogError("Smena: сетевой префаб Chair01 отсутствует в каталоге.");
+                Debug.LogError("Smena: сетевой префаб с индексом " + index + " отсутствует в каталоге.");
                 return null;
             }
 
-            var item = Object.Instantiate(catalog.items[0].prefab, position, Quaternion.identity);
-            item.name = "Chair01";
+            var entry = catalog.items[index];
+            var item = Object.Instantiate(entry.prefab, position, Quaternion.identity);
+            item.name = entry.displayName;
             return item;
         }
 

@@ -15,3 +15,17 @@ MonoBehaviour:
   items:
   - displayName: Chair01
     prefab: {fileID: 1018637660260043595, guid: a3ce123c44e6111409b354fa3a2379c3, type: 3}
+  - displayName: Toilet01
+    prefab: {fileID: 3865515452163275902, guid: 1d390164e4255da4fa728389b4f1f14e, type: 3}
+  - displayName: Bed01
+    prefab: {fileID: 4369512666586341574, guid: feb6bc12e0b2f7d4091d8cffd0c3f20b, type: 3}
+  - displayName: Closet01
+    prefab: {fileID: 1318769432016453220, guid: ecab5946fc82ea5459c10139ebfc248f, type: 3}
+  - displayName: Cushion01
+    prefab: {fileID: 438367841672139671, guid: 7f6aa054aa8095d4bb013cdb67e015c9, type: 3}
+  - displayName: Drawer01
+    prefab: {fileID: 3938706445630382354, guid: 7afefb2c8e945be4c8ad48b9fd5865a7, type: 3}
+  - displayName: Sofa01
+    prefab: {fileID: 5835969478974874805, guid: c35b87783bbaa274f84e62c35e2a4a74, type: 3}
+  - displayName: Table01
+    prefab: {fileID: 4655449816279751739, guid: 3f1f5f1f14dc67544a75f226d98a7196, type: 3}

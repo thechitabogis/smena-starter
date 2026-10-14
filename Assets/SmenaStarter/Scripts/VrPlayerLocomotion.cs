@@ -140,8 +140,6 @@ namespace SmenaStarter
             var entry = catalog.items[index];
             if (entry == null || entry.prefab == null)
                 return;
-            if (index != 0 || entry.displayName != "Chair01")
-                return;
 
             var forward = transform.forward;
             forward.y = 0f;
@@ -156,8 +154,8 @@ namespace SmenaStarter
             position.y = 0.05f;
 
             var item = Instantiate(entry.prefab, position, Quaternion.LookRotation(forward));
-            item.name = "Chair01";
-            NetworkServer.Spawn(item, FurnitureNetworkBootstrap.AssetId);
+            item.name = entry.displayName;
+            NetworkServer.Spawn(item, FurnitureNetworkBootstrap.GetAssetId(index));
             furnitureSpawnCount++;
         }
 
